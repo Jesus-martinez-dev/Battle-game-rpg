@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neo's Awakening - Batalla 1</title>
+  <style>
+    :root{
+      --gold:#d4af37;
+      --red:#b00020;
+      --green:#1fae4b;
+      --panel:rgba(0,0,0,.75);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Cinzel", serif;
+      color:#fff;
+      background:#000 no-repeat center/cover;
+      cursor:default;
+    }
+
+    /* HUD */
+    #hud{
+      position:absolute; top:10px; left:10px;
+      display:flex; flex-direction:column; gap:10px; z-index:15;
+    }
+    .btn{
+      background:linear-gradient(45deg,#5c0000,#900000);
+      border:2px solid var(--gold);
+      padding:10px 16px; border-radius:10px;
+      color:#fff; font-weight:700; cursor:pointer;
+      box-shadow:0 0 10px #ff4747; transition:.2s;
+    }
+    .btn:hover{ transform:scale(1.06) }
+
+    /* Fondo arena */
+    #arena{
+      position:fixed; inset:0; z-index:0;
+      background:url("URL_ARENA_FONDO") center/cover no-repeat black;
+      transition:background-image 800ms ease;
+    }
+
+    /* Personajes */
+    .fighter{
+      position:absolute; bottom:140px; width:240px; height:240px;
+      background-size:contain; background-repeat:no-repeat; background-position:center;
+      image-rendering:auto; filter:drop-shadow(0 8px 24px rgba(0,0,0,.9));
+      transition:transform 120ms ease;
+    }
+    #neo{ left:8%; background-image:url("URL_SPRITE_NEO_IDLE"); }
+    #enemy{ right:8%; background-image:url("URL_SPRITE_ENEMY_IDLE"); transform:scaleX(-1); }
+
+    /* Paneles de vida */
+    .hudbar{
+      position:absolute; top:10px; width:42%; height:64px;
+      background:var(--panel); border:2px solid var(--gold); border-radius:12px;
+      padding:8px 12px; display:flex; gap:12px; align-items:center; z-index:10;
+      box-shadow:0 0 14px rgba(212,175,55,.35);
+    }
+    #neoBar{ left:50%; transform:translateX(-50%); top:auto; bottom:12px; width:70%; height:84px }
+    #enemyBar{ right:10px }
+    .name{ font-weight:800; letter-spacing:.5px; min-width:110px }
+    .hpwrap{ flex:1; border:1px solid #999; border-radius:10px; overflow:hidden; height:14px; background:#222 }
+    .hp{ height:100%; width:100%; background:linear-gradient(90deg,#2bd86d,#1fae4b) }
+    .statline{ font-size:12px; opacity:.85 }
+    .status{ display:flex; gap:6px; flex-wrap:wrap; }
+
+    /* UI Acciones */
+    #ui{
+      position:absolute; bottom:115px; left:50%; transform:translateX(-50%);
+      display:flex; gap:10px; z-index:12;
+    }
+    .action{
+      background:linear-gradient(45deg,#003366,#0a5aa3);
+      border:2px solid var(--gold); color:#fff; font-weight:800;
+      padding:12px 16px; border-radius:12px; cursor:pointer; min-width:130px;
+      box-shadow:0 0 10px rgba(10,90,163,.6);
+    }
+    .action:disabled{ filter:grayscale(1) brightness(.6); cursor:not-allowed }
+
+    /* Inventario / Items */
+    #itemsPanel{
+      position:absolute; bottom:215px; left:50%; transform:translateX(-50%);
+      display:none; gap:8px; flex-wrap:wrap; width:70%;
+      background:var(--panel); border:2px solid var(--gold); border-radius:14px;
+      padding:10px; z-index:13;
+    }
+    .item{
+      background:#133018; border:2px solid var(--gold); border-radius:10px;
+      padding:8px 10px; cursor:pointer; min-width:150px; display:flex; justify-content:space-between; align-items:center;
+    }
+    .item small{ opacity:.8 }
+    .item:disabled{ opacity:.35; cursor:not-allowed }
+
+    /* Caja de diálogo */
+    #dialogueBox{
+      position:absolute; left:50%; transform:translateX(-50%);
+      bottom:20px; width:80%; background:var(--panel);
+      border:2px solid var(--gold); border-radius:14px;
+      padding:16px 18px; font-size:18px; box-shadow:0 0 16px var(--gold);
+      z-index:20; cursor:pointer;
+    }
+
+    /* Daño flotante */
+    .float{
+      position:absolute; color:#fff; font-weight:900; font-size:22px;
+      text-shadow:0 2px 6px rgba(0,0,0,.9); animation:rise 900ms ease forwards;
+      z-index:50; pointer-events:none;
+    }
+    @keyframes rise{
+      0%{ transform:translateY(0); opacity:1 }
+      70%{ transform:translateY(-28px); opacity:.95 }
+      100%{ transform:translateY(-46px); opacity:0 }
+    }
+
+    /* Golpe sencillo */
+    .hit{ animation:hit 120ms ease }
+    @keyframes hit{ 0%{transform:translateX(0)} 50%{transform:translateX(-8px)} 100%{transform:translateX(0)} }
+
+    /* Pantalla shake */
+    .shake{ animation:shake .18s linear 1 }
+    @keyframes shake{
+      0%{ transform:translate(0,0) } 25%{ transform:translate(5px,-4px) }
+      50%{ transform:translate(-4px,3px) } 75%{ transform:translate(2px,-5px) }
+      100%{ transform:translate(0,0) }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HUD -->
+  <div id="hud">
+    <button class="btn" onclick="openDashboard(event)">🏠 Dashboard</button>
+    <button class="btn" onclick="openMarket(event)">🏰 Mercado</button>
+    <button class="btn" onclick="logout(event)">🚪 Cerrar sesión</button>
+  </div>
+
+  <!-- Fondo Arena -->
+  <div id="arena"></div>
+
+  <!-- Personajes -->
+  <div id="neo" class="fighter" title="Neo"></div>
+  <div id="enemy" class="fighter" title="Rival"></div>
+
+  <!-- Barras -->
+  <div id="enemyBar" class="hudbar">
+    <div class="name">Rival</div>
+    <div class="hpwrap"><div id="enemyHP" class="hp"></div></div>
+    <div class="statline" id="enemyStats"></div>
+    <div class="status" id="enemyStatus"></div>
+  </div>
+
+  <div id="neoBar" class="hudbar">
+    <div class="name">Neo</div>
+    <div class="hpwrap"><div id="neoHP" class="hp"></div></div>
+    <div class="statline" id="neoStats"></div>
+    <div class="status" id="neoStatus"></div>
+  </div>
+
+  <!-- Acciones -->
+  <div id="ui">
+    <button id="btnAttack" class="action">Ataque</button>
+    <button id="btnSkill"  class="action">Técnica</button>
+    <button id="btnDefend" class="action">Defender</button>
+    <button id="btnItems"  class="action">Items</button>
+  </div>
+
+  <!-- Items -->
+  <div id="itemsPanel"></div>
+
+  <!-- Diálogo -->
+  <div id="dialogueBox">Clic aquí para comenzar...</div>
+
+  <!-- SFX () -->
+  <audio id="sfxHit" src=""></audio>
+  <audio id="sfxSkill" src=""></audio>
+  <audio id="sfxUse" src=""></audio>
+
+<script>
+/* =========================
+   CONFIG & ESTADO INICIAL
+   ========================= */
+const USE_DAMAGE_API = false; // Actívalo cuando tengamos el backend
+const DAMAGE_API_URL = "http://localhost:8000/compute";
+
+/* URLs de arte/animaciones (usa GIF/WebP animado) */
+const ARENA_BG = "URL_ARENA_FONDO"; // mismo que en CSS si quieres
+const NEO_IDLE    = "URL_SPRITE_NEO_IDLE";
+const NEO_ATTACK  = "URL_SPRITE_NEO_ATTACK";
+const NEO_DEFEND  = "URL_SPRITE_NEO_DEFEND";
+const NEO_HIT     = "URL_SPRITE_NEO_HIT";
+
+const ENEMY_IDLE   = "URL_SPRITE_ENEMY_IDLE";
+const ENEMY_ATTACK = "URL_SPRITE_ENEMY_ATTACK";
+const ENEMY_DEFEND = "URL_SPRITE_ENEMY_DEFEND";
+const ENEMY_HIT    = "URL_SPRITE_ENEMY_HIT";
+
+/* Referencias UI */
+const arena = document.getElementById('arena');
+const neoEl = document.getElementById('neo');
+const enemyEl = document.getElementById('enemy');
+const neoHPBar = document.getElementById('neoHP');
+const enemyHPBar = document.getElementById('enemyHP');
+const neoStats = document.getElementById('neoStats');
+const enemyStats = document.getElementById('enemyStats');
+const neoStatus = document.getElementById('neoStatus');
+const enemyStatus = document.getElementById('enemyStatus');
+const dialogueBox = document.getElementById('dialogueBox');
+const itemsPanel = document.getElementById('itemsPanel');
+const btnAttack = document.getElementById('btnAttack');
+const btnSkill  = document.getElementById('btnSkill');
+const btnDefend = document.getElementById('btnDefend');
+const btnItems  = document.getElementById('btnItems');
+
+const sfxHit = document.getElementById('sfxHit');
+const sfxSkill = document.getElementById('sfxSkill');
+const sfxUse = document.getElementById('sfxUse');
+
+/* Estado de batalla */
+const neo = {
+  name:"Neo",
+  maxHP: 120,
+  hp: 120,
+  atk: 22,
+  def: 10,
+  spd: 16,
+  crit: 0.10,
+  stamina: 100,
+  guard: false,
+  statuses: [] // {name, turns, type, ...}
+};
+
+const enemy = {
+  name:"Rival",
+  maxHP: 140,
+  hp: 140,
+  atk: 20,
+  def: 12,
+  spd: 14,
+  crit: 0.07,
+  stamina: 100,
+  guard: false,
+  statuses:[]
+};
+
+/* Inventario base (se puede sobreescribir con compras) */
+function loadInventory(){
+  const raw = localStorage.getItem("inventory");
+  if(raw){
+    try { return JSON.parse(raw); } catch{}
+  }
+  return [
+    { id:"pocion", name:"Poción", desc:"+40 HP", qty:2, type:"heal", amount:40 },
+    { id:"escudo", name:"Escudo temporal", desc:"Mitiga daño 50% (2T)", qty:1, type:"buff", buff:{name:"Escudo", reduce:0.5, turns:2} },
+    { id:"bomba", name:"Bomba de humo", desc:"Ceguera rival (2T)", qty:1, type:"debuff", debuff:{name:"Ceguera", accMod:-0.30, turns:2} }
+  ];
+}
+let inventory = loadInventory();
+
+let playerTurn = true;
+let combatLocked = true;
+
+/* =========================
+   UTILIDADES
+   ========================= */
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+function rand(){ return Math.random(); }
+function percent(p){ return rand() < p; }
+
+function updateBars(){
+  neo.hp = clamp(neo.hp,0,neo.maxHP);
+  enemy.hp = clamp(enemy.hp,0,enemy.maxHP);
+  neoHPBar.style.width = (neo.hp/neo.maxHP*100)+"%";
+  enemyHPBar.style.width = (enemy.hp/enemy.maxHP*100)+"%";
+  neoStats.textContent = `HP ${neo.hp}/${neo.maxHP}  |  STA ${neo.stamina}`;
+  enemyStats.textContent = `HP ${enemy.hp}/${enemy.maxHP}  |  STA ${enemy.stamina}`;
+  paintStatuses();
+}
+function paintStatuses(){
+  neoStatus.innerHTML = "";
+  enemyStatus.innerHTML = "";
+  const paint = (wrap, list)=> list.forEach(s=>{
+    const tag = document.createElement('span');
+    tag.textContent = `${s.name}(${s.turns})`;
+    tag.style.border = "1px solid " + (s.type==="debuff"?"#ff6":"#6f6");
+    tag.style.padding = "2px 6px";
+    tag.style.borderRadius = "6px";
+    tag.style.fontSize = "12px";
+    wrap.appendChild(tag);
+  });
+  paint(neoStatus, neo.statuses);
+  paint(enemyStatus, enemy.statuses);
+}
+function floatText(targetEl, text){
+  const r = targetEl.getBoundingClientRect();
+  const x = r.left + r.width/2;
+  const y = r.top + r.height/3;
+  const f = document.createElement('div');
+  f.className = "float";
+  f.style.left = x+"px";
+  f.style.top = y+"px";
+  f.textContent = text;
+  document.body.appendChild(f);
+  setTimeout(()=>f.remove(), 950);
+}
+function screenShake(){
+  document.body.classList.add('shake');
+  setTimeout(()=>document.body.classList.remove('shake'), 200);
+}
+function setIdle(){
+  neoEl.style.backgroundImage = `url("${NEO_IDLE}")`;
+  enemyEl.style.backgroundImage = `url("${ENEMY_IDLE}")`;
+}
+function setArena(bg){ arena.style.backgroundImage = `url("${bg}")`; }
+
+/* =========================
+   CÁLCULO DE DAÑO
+   ========================= */
+function baseDamageCalc(attacker, defender){
+  // precisión afectada por estados
+  let acc = 1.00;
+  const blind = attacker.statuses.find(s=>s.name==="Ceguera");
+  if(blind) acc += (blind.accMod||-0.3);
+  if(rand() > acc){ return {hit:false, dmg:0, crit:false}; }
+
+  const variance = 0.85 + rand()*0.3; // 0.85 ~ 1.15
+  let raw = Math.max(1, (attacker.atk - defender.def*0.6));
+  let dmg = Math.floor(raw * variance);
+
+  const crit = percent(attacker.crit);
+  if(crit) dmg = Math.floor(dmg*1.6);
+
+  if(defender.guard) dmg = Math.floor(dmg*0.5);
+
+  const shield = defender.statuses.find(s=>s.name==="Escudo");
+  if(shield){ dmg = Math.floor(dmg * (1 - (shield.reduce||0.5))); }
+
+  return {hit:true, dmg:Math.max(0,dmg), crit};
+}
+async function computeDamage(attacker, defender){
+  if(USE_DAMAGE_API){
+    try{
+      const res = await fetch(DAMAGE_API_URL, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+          atk: attacker.atk, def: defender.def, crit: attacker.crit,
+          guard: defender.guard, statusesA: attacker.statuses, statusesD: defender.statuses
+        })
+      });
+      const js = await res.json();
+      return js; // {hit, dmg, crit}
+    }catch(e){
+      console.warn("Fallo API daño, uso local", e);
+      return baseDamageCalc(attacker, defender);
+    }
+  }else{
+    return baseDamageCalc(attacker, defender);
+  }
+}
+
+/* =========================
+   TURNOS / IA SENCILLA
+   ========================= */
+function lockUI(lock){
+  [btnAttack,btnSkill,btnDefend,btnItems].forEach(b=>b.disabled = lock);
+}
+function endTurnTick(who){
+  who.statuses.forEach(s=>s.turns--);
+  who.statuses = who.statuses.filter(s=>s.turns>0);
+  who.guard = false;
+}
+
+async function playerAttack(){
+  if(combatLocked) return;
+  lockUI(true);
+  neoEl.style.backgroundImage = `url("${NEO_ATTACK}")`;
+  neoEl.style.transform = "translateX(16px)";
+
+  const res = await computeDamage(neo, enemy);
+
+  setTimeout(()=>{
+    neoEl.style.transform = "translateX(0)";
+  }, 140);
+
+  if(res.hit){
+    enemy.hp -= res.dmg;
+    enemyEl.style.backgroundImage = `url("${ENEMY_HIT}")`;
+    enemyEl.classList.add('hit');
+    setTimeout(()=>{
+      enemyEl.classList.remove('hit');
+      setIdle();
+    }, 160);
+    floatText(enemyEl, res.crit? `¡CRIT! -${res.dmg}` : `-${res.dmg}`);
+    sfxHit && sfxHit.play && sfxHit.play();
+    screenShake();
+  }else{
+    floatText(enemyEl, "¡Fallo!");
+    setTimeout(()=>setIdle(), 120);
+  }
+  updateBars();
+  if(enemy.hp<=0){ return victory(); }
+
+  endTurnTick(neo);
+  setTimeout(enemyTurn, 380);
+}
+
+async function playerSkill(){
+  if(combatLocked) return;
+  if(neo.stamina < 30){ say("No tienes suficiente stamina para la técnica."); return; }
+  lockUI(true);
+  neo.stamina -= 30;
+  sfxSkill && sfxSkill.play && sfxSkill.play();
+  neoEl.style.backgroundImage = `url("${NEO_ATTACK}")`;
+
+  const res = await computeDamage(neo, enemy);
+  if(res.hit){
+    const extra = Math.floor(res.dmg*0.15);
+    enemy.hp -= (res.dmg + extra);
+    // Debuff sangrado
+    enemy.statuses.push({name:"Sangrado", type:"debuff", turns:2, bleed:Math.floor(enemy.maxHP*0.04)});
+    enemyEl.style.backgroundImage = `url("${ENEMY_HIT}")`;
+    floatText(enemyEl, res.crit? `¡Técnica CRIT! -${res.dmg+extra}` : `Técnica -${res.dmg+extra}`);
+    screenShake();
+  }else{
+    floatText(enemyEl, "¡Fallo!");
+  }
+  setTimeout(()=>setIdle(), 160);
+  updateBars();
+  if(enemy.hp<=0){ return victory(); }
+
+  endTurnTick(neo);
+  setTimeout(enemyTurn, 420);
+}
+
+function playerDefend(){
+  if(combatLocked) return;
+  lockUI(true);
+  neo.guard = true;
+  neoEl.style.backgroundImage = `url("${NEO_DEFEND}")`;
+  floatText(neoEl, "Guardia");
+  setTimeout(()=>setIdle(), 200);
+  endTurnTick(neo);
+  setTimeout(enemyTurn, 260);
+}
+
+function toggleItems(){
+  if(combatLocked) return;
+  itemsPanel.style.display = (itemsPanel.style.display==="flex") ? "none":"flex";
+}
+function useItem(it){
+  if(it.qty<=0) return;
+  it.qty--;
+
+  if(it.type==="heal"){
+    neo.hp = clamp(neo.hp + it.amount, 0, neo.maxHP);
+    floatText(neoEl, `+${it.amount} HP`);
+  }else if(it.type==="buff"){
+    neo.statuses.push({name:it.buff.name, type:"buff", reduce:it.buff.reduce, turns:it.buff.turns});
+    floatText(neoEl, it.buff.name);
+  }else if(it.type==="debuff"){
+    enemy.statuses.push({name:it.debuff.name, type:"debuff", accMod:it.debuff.accMod, turns:it.debuff.turns});
+    floatText(enemyEl, it.debuff.name);
+  }
+  sfxUse && sfxUse.play && sfxUse.play();
+  renderItems();
+  updateBars();
+  lockUI(true);
+  endTurnTick(neo);
+  setTimeout(enemyTurn, 300);
+}
+
+function renderItems(){
+  itemsPanel.innerHTML = "";
+  inventory.forEach((it)=>{
+    const b = document.createElement('button');
+    b.className = "item";
+    b.disabled = it.qty<=0;
+    b.innerHTML = `<span>${it.name} <small>(${it.desc})</small></span><strong>x${it.qty}</strong>`;
+    b.onclick = ()=>useItem(it);
+    itemsPanel.appendChild(b);
+  });
+}
+
+async function enemyTurn(){
+  // Sangrado (si aplica)
+  const bleed = enemy.statuses.find(s=>s.name==="Sangrado");
+  if(bleed){
+    enemy.hp -= bleed.bleed;
+    floatText(enemyEl, `Sangrado -${bleed.bleed}`);
+    updateBars();
+    if(enemy.hp<=0) return victory();
+  }
+
+  // IA muy simple
+  // - Si Neo con vida alta, 25% defender
+  // - Si vida de Neo baja, atacar
+  // - 15% chance de usar "defender" si el rival está bajo sangrado, para sobrevivir
+  const neoIsHigh = neo.hp > neo.maxHP*0.7;
+  const underBleed = enemy.statuses.some(s=>s.name==="Sangrado");
+
+  let doDefend = false;
+  if(neoIsHigh && percent(0.25)) doDefend = true;
+  if(underBleed && percent(0.15)) doDefend = true;
+
+  if(doDefend){
+    enemy.guard = true;
+    enemyEl.style.backgroundImage = `url("${ENEMY_DEFEND}")`;
+    floatText(enemyEl, "Guardia");
+    setTimeout(()=>setIdle(), 200);
+  }else{
+    enemyEl.style.backgroundImage = `url("${ENEMY_ATTACK}")`;
+    const res = await computeDamage(enemy, neo);
+    if(res.hit){
+      neo.hp -= res.dmg;
+      neoEl.style.backgroundImage = `url("${NEO_HIT}")`;
+      neoEl.classList.add('hit');
+      setTimeout(()=>{
+        neoEl.classList.remove('hit');
+        setIdle();
+      }, 160);
+      floatText(neoEl, res.crit? `CRIT -${res.dmg}` : `-${res.dmg}`);
+      screenShake();
+    }else{
+      floatText(neoEl, "¡Fallo!");
+      setTimeout(()=>setIdle(), 120);
+    }
+  }
+
+  updateBars();
+  if(neo.hp<=0) return defeat();
+
+  endTurnTick(enemy);
+  playerTurn = true;
+  lockUI(false);
+  itemsPanel.style.display = "none";
+  say("Tu turno. Elige sabiamente.");
+}
+
+/* =========================
+   INICIO / DIÁLOGO
+   ========================= */
+function say(t){ dialogueBox.textContent = t; }
+
+function startDialogue(){
+  // Inicia estados visuales
+  setArena(ARENA_BG);
+  setIdle();
+  updateBars();
+  renderItems();
+
+  // Orden por velocidad
+  playerTurn = neo.spd >= enemy.spd;
+
+  const lines = [
+    "Jeans: El chico que está ahí...",
+    "Jeans: Esta es tu primera prueba. Observa sus movimientos y piensa antes de actuar.",
+    "Jeans: ¡Tu turno, Neo! Demuéstrales de qué estás hecho."
+  ];
+  let i = 0;
+  say("Clic para continuar...");
+  const onClick = ()=>{
+    if(i < lines.length){
+      say(lines[i++]);
+    }else{
+      dialogueBox.removeEventListener('click', onClick);
+      dialogueBox.textContent = "Elige tu acción.";
+      combatLocked = false;
+      lockUI(!playerTurn);
+      if(!playerTurn) enemyTurn();
+    }
+  };
+  dialogueBox.addEventListener('click', onClick);
+}
+
+/* =========================
+   FIN DE COMBATE
+   ========================= */
+function victory(){
+  lockUI(true);
+  say("¡Victoria! Has ganado experiencia y algunos créditos.");
+  setTimeout(()=> window.location.href = "recompensas.html", 1400);
+}
+function defeat(){
+  lockUI(true);
+  say("Has caído… pero puedes intentarlo de nuevo.");
+  setTimeout(()=> window.location.href = "derrota.html", 1400);
+}
+
+/* =========================
+   EVENTOS
+   ========================= */
+btnAttack.onclick = ()=>{ if(!combatLocked) playerAttack(); };
+btnSkill.onclick  = ()=>{ if(!combatLocked) playerSkill(); };
+btnDefend.onclick = ()=>{ if(!combatLocked) playerDefend(); };
+btnItems.onclick  = ()=>{ if(!combatLocked) toggleItems(); };
+
+function openDashboard(e){ e.stopPropagation(); window.location.href="dashboard.html"; }
+function openMarket(e){ e.stopPropagation(); window.location.href="mercado.html"; }
+function logout(e){ e.stopPropagation(); window.location.href="index.html"; }
+
+/* Arranque */
+window.addEventListener('load', ()=>{
+  lockUI(true);
+  combatLocked = true;
+  say("Clic aquí para comenzar...");
+  startDialogue();
+});
+</script>
+</body>
+</html>
