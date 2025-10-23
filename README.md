@@ -23,3 +23,5 @@ Item Panel: Inventory of usable items
 Dialog Box: Narrative system
 
 Visual Effects: Hovering text and animations
+
+This is not the complete project, this is just a part of testing.
