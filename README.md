@@ -1,27 +1,34 @@
-# historia1.1-
-battle part story of the game
+ # ⚔️ RPG Battle System: Logic Engine and Algorithms
 
-Overview
-Neo's Awakening - Battle 1 is a turn-based combat game developed in HTML5, CSS3, and pure JavaScript. The game features a stylized battle system with RPG elements, where the player controls the character "Neo" in his first battle against an opponent.
+[![HTML](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/es/docs/Web/HTML)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/es/docs/Web/JavaScript)
 
-Project Structure
-1. HTML Architecture
-The project uses a semantic HTML5 structure with the following main components:
+## 📝 Project Description
 
-HUD (Heads-Up Display): Top navigation controls
+This repository hosts the **core logic engine** for a role-playing game (RPG) battle system. The project focuses on code architecture to efficiently handle the sequence of events, damage calculation, and statistical interaction between characters (heroes) and enemies.
 
-Arena: Background where the battle takes place
+This work demonstrates the ability to model complex systems and apply simulation algorithms in a practical environment.
 
-Characters: Neo (player) and Rival (enemy)
+## 🚀 Technologies and Languages
 
-Status Bars: HP and stats information
+The project is developed with a web-based structure for easy demonstration:
 
-Action Interface: Buttons to control the character
+* **JavaScript (ES6+):** Implementation of the battle logic, including classes for entity management.
+* **HTML5 & CSS3:** Used for the basic structure of the simulator or the visualization interface.
 
-Item Panel: Inventory of usable items
+## ✨ Features and Implemented Logic
 
-Dialog Box: Narrative system
+The battle engine includes robust logic for the following elements:
 
-Visual Effects: Hovering text and animations
+1. **Turn-Based System:**
+* Implementation of an action queue that determines the attack order of all entities (heroes and enemies) based on the Speed/Initiative statistic.
 
-This is not the complete project, this is just a part of testing.
+2. **Entity Model:**
+* Definition of clear classes or data structures for characters and enemies, including essential attributes such as **HP (Life)**, **MP (Mana/Resources)**, **Attack**, and **Defense**.
+
+3. **Damage Calculation Algorithm:**
+* Function that processes the interaction between the attacker's attack and the target's defense.
+* Handling random variables to simulate the **Luck** factor or the probability of a **Critical Hit**.
+
+4. **Battle State:**
+* Logic to monitor victory or defeat conditions (e.g., when a team's HP reaches zero).
