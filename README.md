@@ -34,4 +34,4 @@ The battle engine includes robust logic for the following elements:
 
 * This is just one part of a larger project.
 
-* Here is the complete project I was doing with a collaborator: https://github.com/Starling74?tab=repositories
+* Here is the all project I was doing with a collaborator: https://github.com/Starling74?tab=repositories
