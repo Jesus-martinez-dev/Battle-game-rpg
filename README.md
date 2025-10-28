@@ -6,8 +6,7 @@
 ## 📝 Project Description
 
 This repository hosts the **core logic engine** for a role-playing game (RPG) battle system. The project focuses on code architecture to efficiently handle the sequence of events, damage calculation, and statistical interaction between characters (heroes) and enemies.
-
-This work demonstrates the ability to model complex systems and apply simulation algorithms in a practical environment.
+ 
 
 ## 🚀 Technologies and Languages
 
@@ -32,3 +31,7 @@ The battle engine includes robust logic for the following elements:
 
 4. **Battle State:**
 * Logic to monitor victory or defeat conditions (e.g., when a team's HP reaches zero).
+
+* This is just one part of a larger project.
+
+* Here is the complete project I was doing with a collaborator: https://github.com/Starling74?tab=repositories
